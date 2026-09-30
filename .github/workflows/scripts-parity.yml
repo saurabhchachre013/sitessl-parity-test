@@ -1,0 +1,47 @@
+name: scripts-parity
+
+# WAF-60: fails if scripts/ differs between the two live sitessl branches.
+# The branch names are defined ONLY in the env block below.
+# If WAF-53 renames either branch, update it here in the same change.
+#
+# Why a daily schedule (not PR-blocking): cross-region fixes land as two PRs,
+# one per branch. A blocking check would make the first PR unmergeable until
+# the second is ready. A daily run reports drift that persists, without
+# blocking normal work. A failure caught mid-fix should clear on the next run.
+
+on:
+  schedule:
+    - cron: "0 3 * * *"   # daily at 03:00 UTC
+  workflow_dispatch:       # "Run workflow" button for manual checks
+
+env:
+  BRANCH_A: master-sea
+  BRANCH_B: master-aws-au-al9
+
+jobs:
+  parity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # fetch all branches, otherwise there is nothing to compare
+
+      - name: Check both branches exist
+        run: |
+          for b in "$BRANCH_A" "$BRANCH_B"; do
+            if ! git rev-parse --verify --quiet "origin/$b" > /dev/null; then
+              echo "::error::Branch '$b' not found. Was it renamed (WAF-53)? Update env in scripts-parity.yml."
+              exit 1
+            fi
+          done
+
+      - name: Compare scripts/
+        run: |
+          diff=$(git diff --name-only "origin/$BRANCH_A" "origin/$BRANCH_B" -- scripts/)
+          if [ -n "$diff" ]; then
+            echo "::error::scripts/ differs between $BRANCH_A and $BRANCH_B"
+            echo "Differing files:"
+            echo "$diff"
+            exit 1
+          fi
+          echo "scripts/ is identical on $BRANCH_A and $BRANCH_B"
