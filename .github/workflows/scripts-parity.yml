@@ -1,14 +1,5 @@
 name: scripts-parity
 
-# WAF-60: fails if scripts/ differs between the two live sitessl branches.
-# The branch names are defined ONLY in the env block below.
-# If WAF-53 renames either branch, update it here in the same change.
-#
-# Why a daily schedule (not PR-blocking): cross-region fixes land as two PRs,
-# one per branch. A blocking check would make the first PR unmergeable until
-# the second is ready. A daily run reports drift that persists, without
-# blocking normal work. A failure caught mid-fix should clear on the next run.
-
 on:
   schedule:
     - cron: "0 3 * * *"   # daily at 03:00 UTC
@@ -16,7 +7,7 @@ on:
 
 env:
   BRANCH_A: master-sea
-  BRANCH_B: master-fake
+  BRANCH_B: master-aws-au-al9
 
 jobs:
   parity:
